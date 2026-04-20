@@ -189,6 +189,58 @@ class TestRuns:
         assert final["status"] in ("completed", "failed")
         assert final.get("iterations_used", 0) >= 1
 
+    def test_human_review_flow(self, s):
+        payload = {
+            "name": "TEST_run_review",
+            "spec": "Build a single HTML page that says Hello and includes one button.",
+            "max_iterations": 2,
+            "require_human_review": True,
+        }
+        r = s.post(f"{API}/runs/start", json=payload)
+        assert r.status_code == 200, r.text
+        run = r.json()
+        rid = run["id"]
+        assert run["require_human_review"] is True
+
+        # Wait for pending approval to appear
+        deadline = time.time() + 30
+        approvals = []
+        while time.time() < deadline:
+            ar = s.get(f"{API}/runs/{rid}/approvals")
+            assert ar.status_code == 200
+            approvals = ar.json()
+            if any(a["status"] == "pending" for a in approvals):
+                break
+            time.sleep(1.0)
+        assert any(a["status"] == "pending" for a in approvals), "Expected pending approval"
+        pending = next(a for a in approvals if a["status"] == "pending")
+
+        # Approve the pending iteration
+        decision = {
+            "iteration": pending["iteration"],
+            "decision": "approved",
+            "feedback": "Looks good",
+            "reviewer": "pytest",
+        }
+        dr = s.post(f"{API}/runs/{rid}/approvals", json=decision)
+        assert dr.status_code == 200, dr.text
+        approved = dr.json()
+        assert approved["status"] == "approved"
+        assert approved["reviewer"] == "pytest"
+
+        # Ensure run eventually completes
+        deadline = time.time() + 60
+        final = None
+        while time.time() < deadline:
+            rr = s.get(f"{API}/runs/{rid}")
+            assert rr.status_code == 200
+            final = rr.json()
+            if final["status"] in ("completed", "failed"):
+                break
+            time.sleep(1.0)
+        assert final is not None
+        assert final["status"] in ("completed", "failed")
+
 
 # ---------- Download ZIP ----------
 class TestDownload:

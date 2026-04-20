@@ -8,7 +8,7 @@ import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
@@ -73,6 +73,7 @@ class TaskCreate(BaseModel):
     spec: str
     model_repo_id: Optional[str] = None
     max_iterations: int = 4
+    require_human_review: bool = False
 
 
 class Task(BaseModel):
@@ -82,6 +83,7 @@ class Task(BaseModel):
     spec: str
     model_repo_id: str
     max_iterations: int
+    require_human_review: bool = False
     created_at: str
 
 
@@ -91,6 +93,7 @@ class RunStart(BaseModel):
     spec: Optional[str] = None
     model_repo_id: Optional[str] = None
     max_iterations: int = 4
+    require_human_review: bool = False
 
 
 class Run(BaseModel):
@@ -101,12 +104,15 @@ class Run(BaseModel):
     spec: str
     model_repo_id: str
     max_iterations: int
+    require_human_review: bool = False
     status: str
+    approval_state: Optional[str] = None
     created_at: str
     started_at: Optional[str] = None
     finished_at: Optional[str] = None
     iterations_used: Optional[int] = None
     final_code: Optional[str] = None
+    workspace_path: Optional[str] = None
 
 
 class RunEvent(BaseModel):
@@ -119,6 +125,25 @@ class RunEvent(BaseModel):
     title: str
     data: dict[str, Any]
     timestamp: str
+
+
+class RunApproval(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    run_id: str
+    iteration: int
+    status: str
+    feedback: str = ""
+    reviewer: Optional[str] = None
+    created_at: str
+    updated_at: str
+
+
+class RunApprovalDecision(BaseModel):
+    iteration: int = Field(ge=1)
+    decision: Literal["approved", "rejected"]
+    feedback: str = ""
+    reviewer: Optional[str] = None
 
 
 # ---------- Health ----------
@@ -181,6 +206,7 @@ async def create_task(payload: TaskCreate):
         "spec": payload.spec,
         "model_repo_id": model_repo,
         "max_iterations": payload.max_iterations,
+        "require_human_review": payload.require_human_review,
         "created_at": _now(),
     }
     await db.tasks.insert_one(dict(doc))
@@ -204,6 +230,7 @@ async def start_run(payload: RunStart):
         spec = task["spec"]
         model_repo = task["model_repo_id"]
         max_iter = task["max_iterations"]
+        require_human_review = task.get("require_human_review", False)
     else:
         if not payload.spec:
             raise HTTPException(status_code=400, detail="spec or task_id required")
@@ -211,6 +238,7 @@ async def start_run(payload: RunStart):
         spec = payload.spec
         model_repo = payload.model_repo_id or select_best(SEED_MODELS, "coding")["repo_id"]
         max_iter = payload.max_iterations
+        require_human_review = payload.require_human_review
 
     run_id = str(uuid.uuid4())
     run_doc = {
@@ -220,13 +248,24 @@ async def start_run(payload: RunStart):
         "spec": spec,
         "model_repo_id": model_repo,
         "max_iterations": max_iter,
+        "require_human_review": require_human_review,
         "status": "queued",
+        "approval_state": "pending" if require_human_review else "not_required",
         "created_at": _now(),
     }
     await db.runs.insert_one(dict(run_doc))
 
     # kick off background agent loop
-    asyncio.create_task(run_agent_loop(run_id, spec, model_repo, max_iter, db))
+    asyncio.create_task(
+        run_agent_loop(
+            run_id,
+            spec,
+            model_repo,
+            max_iter,
+            db,
+            require_human_review=require_human_review,
+        )
+    )
 
     return Run(**run_doc)
 
@@ -252,6 +291,43 @@ async def get_run_events(run_id: str, since: Optional[str] = None):
         query["timestamp"] = {"$gt": since}
     docs = await db.run_events.find(query, {"_id": 0}).sort("timestamp", 1).to_list(5000)
     return [RunEvent(**d) for d in docs]
+
+
+@api.get("/runs/{run_id}/approvals", response_model=list[RunApproval])
+async def get_run_approvals(run_id: str):
+    run = await db.runs.find_one({"id": run_id}, {"_id": 0, "id": 1})
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    docs = await db.run_approvals.find({"run_id": run_id}, {"_id": 0}).sort("created_at", 1).to_list(500)
+    return [RunApproval(**d) for d in docs]
+
+
+@api.post("/runs/{run_id}/approvals", response_model=RunApproval)
+async def submit_run_approval(run_id: str, payload: RunApprovalDecision):
+    run = await db.runs.find_one({"id": run_id}, {"_id": 0, "id": 1, "require_human_review": 1})
+    if not run:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if not run.get("require_human_review"):
+        raise HTTPException(status_code=400, detail="Run does not require human review")
+
+    pending = await db.run_approvals.find_one(
+        {"run_id": run_id, "iteration": payload.iteration, "status": "pending"},
+        {"_id": 0},
+        sort=[("created_at", -1)],
+    )
+    if not pending:
+        raise HTTPException(status_code=404, detail="Pending approval not found for this iteration")
+
+    update = {
+        "status": payload.decision,
+        "feedback": payload.feedback,
+        "reviewer": payload.reviewer,
+        "updated_at": _now(),
+    }
+    await db.run_approvals.update_one({"id": pending["id"]}, {"$set": update})
+    await db.runs.update_one({"id": run_id}, {"$set": {"approval_state": payload.decision}})
+    doc = await db.run_approvals.find_one({"id": pending["id"]}, {"_id": 0})
+    return RunApproval(**doc)
 
 
 @api.get("/runs/latest/summary")
