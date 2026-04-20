@@ -2,74 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-    margin: 0;
-    font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-        "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-        sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
+/* Fonts: Cabinet Grotesk (Fontshare), IBM Plex Sans + JetBrains Mono (Google Fonts) */
+@import url("https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
 
-code {
-    font-family:
-        source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+:root {
+    --ab-bg: #ffffff;
+    --ab-bg-subtle: #f7f7f7;
+    --ab-surface: #ffffff;
+    --ab-border: #e5e5e5;
+    --ab-border-heavy: #0f0f0f;
+    --ab-text: #0f0f0f;
+    --ab-text-secondary: #666666;
+    --ab-text-inverse: #ffffff;
+
+    --ab-terminal-bg: #0a0a0a;
+    --ab-terminal-surface: #121212;
+    --ab-terminal-text: #e5e5e5;
+    --ab-terminal-green: #00ff41;
+
+    --ab-klein-blue: #002fa7;
+    --ab-signal-red: #e02020;
+    --ab-warning-yellow: #ffd700;
+    --ab-success-green: #00c853;
 }
 
 @layer base {
     :root {
         --background: 0 0% 100%;
-        --foreground: 0 0% 3.9%;
+        --foreground: 0 0% 6%;
         --card: 0 0% 100%;
-        --card-foreground: 0 0% 3.9%;
+        --card-foreground: 0 0% 6%;
         --popover: 0 0% 100%;
-        --popover-foreground: 0 0% 3.9%;
-        --primary: 0 0% 9%;
-        --primary-foreground: 0 0% 98%;
-        --secondary: 0 0% 96.1%;
+        --popover-foreground: 0 0% 6%;
+        --primary: 222 100% 33%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 0 0% 96%;
         --secondary-foreground: 0 0% 9%;
-        --muted: 0 0% 96.1%;
-        --muted-foreground: 0 0% 45.1%;
-        --accent: 0 0% 96.1%;
+        --muted: 0 0% 96%;
+        --muted-foreground: 0 0% 40%;
+        --accent: 0 0% 96%;
         --accent-foreground: 0 0% 9%;
-        --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 89.8%;
-        --input: 0 0% 89.8%;
-        --ring: 0 0% 3.9%;
-        --chart-1: 12 76% 61%;
-        --chart-2: 173 58% 39%;
-        --chart-3: 197 37% 24%;
-        --chart-4: 43 74% 66%;
-        --chart-5: 27 87% 67%;
-        --radius: 0.5rem;
-    }
-    .dark {
-        --background: 0 0% 3.9%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 0 0% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 0 0% 9%;
-        --secondary: 0 0% 14.9%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 0 0% 14.9%;
-        --muted-foreground: 0 0% 63.9%;
-        --accent: 0 0% 14.9%;
-        --accent-foreground: 0 0% 98%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 14.9%;
-        --input: 0 0% 14.9%;
-        --ring: 0 0% 83.1%;
-        --chart-1: 220 70% 50%;
-        --chart-2: 160 60% 45%;
-        --chart-3: 30 80% 55%;
-        --chart-4: 280 65% 60%;
-        --chart-5: 340 75% 55%;
+        --destructive: 0 75% 50%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 0 0% 90%;
+        --input: 0 0% 90%;
+        --ring: 222 100% 33%;
+        --radius: 0;
     }
 }
 
@@ -77,39 +56,143 @@ code {
     * {
         @apply border-border;
     }
+    html,
     body {
-        @apply bg-background text-foreground;
+        margin: 0;
+        padding: 0;
+        background: var(--ab-bg);
+        color: var(--ab-text);
+        font-family:
+            "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        font-feature-settings:
+            "cv02",
+            "cv03",
+            "cv04";
+    }
+    code,
+    pre,
+    kbd,
+    samp,
+    .font-mono {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+    }
+    .font-heading {
+        font-family: "Cabinet Grotesk", "IBM Plex Sans", sans-serif;
+        letter-spacing: -0.02em;
+    }
+    .font-mono-num {
+        font-family: "JetBrains Mono", monospace;
+        font-variant-numeric: tabular-nums;
     }
 }
 
-@layer base {
-    [data-debug-wrapper="true"] {
-        display: contents !important;
+@layer components {
+    .overline {
+        @apply text-[10px] uppercase tracking-[0.2em] text-neutral-500 font-mono;
     }
+    .grid-border {
+        @apply border border-neutral-200;
+    }
+    .grid-border-heavy {
+        @apply border border-neutral-900;
+    }
+    .widget {
+        @apply bg-white border border-neutral-200 p-6 transition-colors duration-150;
+    }
+    .widget:hover {
+        @apply border-neutral-400;
+    }
+    .pill {
+        @apply inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider border;
+    }
+    .terminal {
+        background: var(--ab-terminal-bg);
+        color: var(--ab-terminal-text);
+        font-family: "JetBrains Mono", monospace;
+    }
+    .terminal-green {
+        color: var(--ab-terminal-green);
+    }
+    .kb {
+        @apply font-mono text-[11px] border border-neutral-300 px-1.5 py-0.5 bg-neutral-50;
+    }
+}
 
-    [data-debug-wrapper="true"] > * {
-        margin-left: inherit;
-        margin-right: inherit;
-        margin-top: inherit;
-        margin-bottom: inherit;
-        padding-left: inherit;
-        padding-right: inherit;
-        padding-top: inherit;
-        padding-bottom: inherit;
-        column-gap: inherit;
-        row-gap: inherit;
-        gap: inherit;
-        border-left-width: inherit;
-        border-right-width: inherit;
-        border-top-width: inherit;
-        border-bottom-width: inherit;
-        border-left-style: inherit;
-        border-right-style: inherit;
-        border-top-style: inherit;
-        border-bottom-style: inherit;
-        border-left-color: inherit;
-        border-right-color: inherit;
-        border-top-color: inherit;
-        border-bottom-color: inherit;
+/* Subtle scanline overlay for terminal widgets */
+.scanlines::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.02) 0px,
+        rgba(255, 255, 255, 0.02) 1px,
+        transparent 1px,
+        transparent 3px
+    );
+}
+
+/* Animated pulse dot */
+@keyframes pulse-dot {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
     }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.3);
+    }
+}
+.pulse-dot {
+    animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+/* Typewriter line reveal */
+@keyframes line-in {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.line-in {
+    animation: line-in 0.25s ease-out both;
+}
+
+/* Rotating grid for loading */
+@keyframes spin-slow {
+    to {
+        transform: rotate(360deg);
+    }
+}
+.spin-slow {
+    animation: spin-slow 6s linear infinite;
+}
+
+/* Custom scrollbar for dark terminals */
+.terminal ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.terminal ::-webkit-scrollbar-thumb {
+    background: #2a2a2a;
+}
+.terminal ::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::selection {
+    background: #002fa7;
+    color: #ffffff;
+}
+
+[data-debug-wrapper="true"] {
+    display: contents !important;
 }
