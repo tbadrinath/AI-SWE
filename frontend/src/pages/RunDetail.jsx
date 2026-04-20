@@ -78,7 +78,9 @@ export default function RunDetail() {
   const testEv = iterEvents.find((e) => e.type === "test_result");
   const diagEv = iterEvents.find((e) => e.type === "diagnosis");
   const visionEvs = iterEvents.filter((e) => e.type === "vision");
-  const pendingApproval = approvals.find((a) => a.iteration === selectedIter && a.status === "pending");
+  const pendingApproval =
+    approvals.find((a) => a.iteration === selectedIter && a.status === "pending") ||
+    approvals.find((a) => a.status === "pending");
 
   const submitApproval = async (decision) => {
     if (!pendingApproval) return;
@@ -174,21 +176,26 @@ export default function RunDetail() {
             <p className="mt-2 font-mono text-[12px] text-neutral-600">No pending approval for this iteration.</p>
           )}
           {pendingApproval && (
-            <div className="mt-3 flex items-center gap-2">
-              <button
-                onClick={() => submitApproval("approved")}
-                disabled={submittingApproval}
-                className="border border-neutral-900 bg-[var(--ab-success-green)] px-3 py-1.5 font-mono text-[11px] uppercase text-white disabled:opacity-60"
-              >
-                approve
-              </button>
-              <button
-                onClick={() => submitApproval("rejected")}
-                disabled={submittingApproval}
-                className="border border-neutral-900 bg-[var(--ab-signal-red)] px-3 py-1.5 font-mono text-[11px] uppercase text-white disabled:opacity-60"
-              >
-                reject
-              </button>
+            <div className="mt-3 space-y-2">
+              <p className="font-mono text-[11px] text-neutral-700">
+                Pending approval for iteration #{pendingApproval.iteration}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => submitApproval("approved")}
+                  disabled={submittingApproval}
+                  className="border border-neutral-900 bg-[var(--ab-success-green)] px-3 py-1.5 font-mono text-[11px] uppercase text-white disabled:opacity-60"
+                >
+                  approve
+                </button>
+                <button
+                  onClick={() => submitApproval("rejected")}
+                  disabled={submittingApproval}
+                  className="border border-neutral-900 bg-[var(--ab-signal-red)] px-3 py-1.5 font-mono text-[11px] uppercase text-white disabled:opacity-60"
+                >
+                  reject
+                </button>
+              </div>
             </div>
           )}
         </div>

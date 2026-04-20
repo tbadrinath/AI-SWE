@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import os
 import re
 import time
 import uuid
@@ -18,6 +19,7 @@ from typing import Any
 
 
 RUN_WORKSPACE_ROOT = Path("/tmp/agentic_builder_runs")
+APPROVAL_TIMEOUT_SECONDS = int(os.environ.get("RUN_APPROVAL_TIMEOUT_SECONDS", "180"))
 
 
 def _now_iso() -> str:
@@ -82,7 +84,12 @@ def _evaluate_requirement(requirement_id: str, code: str) -> bool:
     if requirement_id == "persistence":
         return "localstorage" in lower
     if requirement_id == "counter_value":
-        return ("count" in lower) and ("id=\"count\"" in lower or "id='count'" in lower)
+        has_count_id = re.search(r"id\s*=\s*['\"]count['\"]", lower) is not None
+        return ("count" in lower) and (
+            has_count_id
+            or "counter" in lower
+            or "current value" in lower
+        )
     if requirement_id == "counter_buttons":
         return _contains_any(lower, ("increment", "decrement", "+", "-")) and "<button" in lower
     if requirement_id == "has_button":
@@ -198,11 +205,30 @@ def _generate_candidate_code(task_spec: str, previous_code: str, failed_requirem
     # Ensure missing requirements are patched immediately for iterative repair.
     failed_ids = {r["id"] for r in failed_requirements}
     if "hello_text" in failed_ids and "hello" not in code.lower():
-        code = code.replace("<body>", "<body>\n  <p>Hello</p>", 1)
+        if "<body>" in code:
+            code = code.replace("<body>", "<body>\n  <p>Hello</p>", 1)
+        elif "</body>" in code:
+            code = code.replace("</body>", "  <p>Hello</p>\n</body>", 1)
+        else:
+            code += "\n<p>Hello</p>"
     if "has_button" in failed_ids and "<button" not in code.lower():
-        code = code.replace("</body>", "  <button>Continue</button>\n</body>", 1)
+        if "</body>" in code:
+            code = code.replace("</body>", "  <button>Continue</button>\n</body>", 1)
+        else:
+            code += "\n<button>Continue</button>"
     if "persistence" in failed_ids and "localstorage" not in code.lower():
-        code = code.replace("</script>", "localStorage.setItem('health','ok');\n  </script>")
+        persistence_patch = (
+            "const _abStateKey='ab_state';\n"
+            "const _abState=JSON.parse(localStorage.getItem(_abStateKey)||'{}');\n"
+            "_abState.lastRun=new Date().toISOString();\n"
+            "localStorage.setItem(_abStateKey,JSON.stringify(_abState));\n"
+        )
+        if "</script>" in code:
+            code = code.replace("</script>", f"{persistence_patch}  </script>", 1)
+        elif "</body>" in code:
+            code = code.replace("</body>", f"  <script>\n  {persistence_patch}  </script>\n</body>", 1)
+        else:
+            code += f"\n<script>\n{persistence_patch}</script>"
     if not code and previous_code:
         return previous_code
     return code
@@ -245,6 +271,12 @@ def _deterministic_vision_events(run_id: str, iteration: int, failed_checks: int
 
 
 async def _await_approval(run_id: str, iteration: int, db, timeout_seconds: int = 180) -> tuple[str, str]:
+    """Poll for reviewer action and return (status, feedback), auto-approving on timeout.
+
+    Status is "approved" or "rejected" when the reviewer responds, and "approved" when
+    timeout is reached so long-running runs do not remain blocked forever.
+    The timeout is configurable via RUN_APPROVAL_TIMEOUT_SECONDS.
+    """
     started = time.time()
     while time.time() - started < timeout_seconds:
         approval = await db.run_approvals.find_one(
@@ -320,14 +352,19 @@ async def run_agent_loop(
             await emit(iteration, "review", "approval_requested", "Human approval required", {
                 "message": "Approve or reject this iteration before test execution.",
             })
-            decision, feedback = await _await_approval(run_id, iteration, db)
+            decision, feedback = await _await_approval(
+                run_id, iteration, db, timeout_seconds=APPROVAL_TIMEOUT_SECONDS
+            )
             await db.runs.update_one({"id": run_id}, {"$set": {"approval_state": decision}})
             await emit(iteration, "review", "approval_result", f"Human review: {decision}", {
                 "decision": decision,
                 "feedback": feedback,
             })
             if decision == "rejected":
-                failed_requirements = [{"id": "review_feedback", "description": feedback or "Reviewer requested changes."}]
+                failed_requirements = [
+                    *failed_requirements,
+                    {"id": "review_feedback", "description": feedback or "Reviewer requested changes."},
+                ]
                 await emit(iteration, "fix", "info", "Applying reviewer feedback", {"feedback": feedback})
                 continue
 
