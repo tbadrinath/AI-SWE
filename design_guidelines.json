@@ -1,0 +1,98 @@
+{
+  "theme": "LIGHT",
+  "archetype": "4 (Swiss & High-Contrast)",
+  "vibe": "Authority, Clarity, Truth. Objective, rigid, functional. The dashboard simulates a command center control plane with uncompromising precision.",
+  "colors": {
+    "background": {
+      "default": "#FFFFFF",
+      "subtle": "#F7F7F7",
+      "terminal": "#0A0A0A"
+    },
+    "surface": {
+      "default": "#FFFFFF",
+      "terminal": "#121212"
+    },
+    "border": {
+      "default": "#E5E5E5",
+      "heavy": "#0F0F0F"
+    },
+    "text": {
+      "primary": "#0F0F0F",
+      "secondary": "#666666",
+      "inverse": "#FFFFFF",
+      "terminal": "#E5E5E5"
+    },
+    "accents": {
+      "signal_red": "#E02020",
+      "klein_blue": "#002FA7",
+      "warning_yellow": "#FFD700",
+      "success_green": "#00C853",
+      "terminal_green": "#00FF41"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "'Cabinet Grotesk', sans-serif",
+      "body": "'IBM Plex Sans', sans-serif",
+      "mono": "'JetBrains Mono', monospace"
+    },
+    "rules": {
+      "headings": "Tight letter spacing (tracking-tight), never default to bold (use font-medium or font-black). Left aligned.",
+      "overline": "Uppercase, tiny, wide spacing (tracking-[0.2em]).",
+      "body": "leading-relaxed for paragraphs. JetBrains Mono for all numeric data, logs, and code.",
+      "code": "JetBrains Mono with terminal green/white on dark background."
+    },
+    "sizes": {
+      "h1": "text-4xl md:text-5xl",
+      "h2": "text-2xl md:text-3xl",
+      "h3": "text-xl md:text-2xl",
+      "h4": "text-lg md:text-xl",
+      "body": "text-base",
+      "small": "text-sm",
+      "micro": "text-xs"
+    }
+  },
+  "spacing_and_layout": {
+    "grid": "Mode B: THE 'CONTROL ROOM' GRID. Base Grid: grid-cols-1 md:grid-cols-3 lg:grid-cols-12. Tight gap strategy (gap-4 or gap-0 for pure border-collapse).",
+    "padding": "Generous internal padding for main sections (p-8 or p-12). Widget interiors use tight padding (p-4 or p-6).",
+    "borders": "GRID BORDERS style. Expose the skeleton. Containers have border-collapse style layout. Items have border-r border-b border-border.",
+    "alignment": "Optical alignment over geometrical. F-Pattern priority (top-left for North Star Metric). Collapsible left sidebar."
+  },
+  "components": {
+    "surfaces": "GRID BORDERS (The 'Technical' Look) for dashboard widgets. Flat solid backgrounds, 1px subtle border, no shadows. Hover state triggers a slight dark border color shift. No glassmorphism in this archetype.",
+    "buttons": "Square or very minimal rounding (rounded-none or rounded-sm). High contrast. Primary: Klein Blue bg, White text. Secondary: White bg, Black 1px border, Black text.",
+    "charts": "Shadcn charts (Recharts). Line charts for trends, bar charts for comparisons. Use sharp square tooltips.",
+    "tables": "Dense rows. 1px borders. Mono font for data cells. Sticky headers.",
+    "live_code_viewer": "RETRO-FUTURISM (The 'Terminal' Look) only for the code viewing widget. Deep black background, terminal green text or syntax highlighted. Scanlines optional.",
+    "task_builder": "Heavy use of Shadcn Input/Select. Stark borders."
+  },
+  "motion": {
+    "interactions": "Minimalist. Snappy transitions. Hover states must explicitly set text and bg color.",
+    "perception_timeline": "Smooth translation for live timeline. Use framer-motion for entering events.",
+    "live_viewer": "Typewriter effect for incoming logs."
+  },
+  "icons": {
+    "library": "lucide-react (default) and @phosphor-icons/react for dense dashboard views.",
+    "style": "Sharp, linear, 1px stroke."
+  },
+  "media": {
+    "strategy": "No images. Purely data, code, and typography-driven UI. The 'Control Plane' relies on graphs, numbers, and logs.",
+    "image_urls": {}
+  },
+  "specific_screens": {
+    "run_dashboard": {
+      "layout": "Top-level metrics row (Status, Phase, Uptime) -> Central live timeline and live code viewer. Right sidebar for Perception events."
+    },
+    "model_registry": {
+      "layout": "Grid of model cards. Each card uses tight borders, mono font for model size/parameters. Capability badges use solid high-contrast pills."
+    },
+    "task_builder": {
+      "layout": "Two-column bento box. Left: Form inputs. Right: Live JSON spec preview."
+    }
+  },
+  "accessibility_and_testing": {
+    "contrast": "Ensure APCA standards. Use Text Shadow on dark areas if needed.",
+    "testing": "All interactive elements MUST include data-testid attribute in kebab-case, role-based."
+  },
+  "instructions_to_main_agent": "Implement a rigorous, grid-based layout avoiding all rounded corners (use rounded-none or max rounded-sm). Stick strictly to the monochrome palette with Klein Blue and Signal Red purely for functional states. Use JetBrains Mono extensively for all data, logs, and capability badges. Install and configure the font families in Tailwind. Use Lucide or Phosphor icons. Build out the Task Builder, Run Dashboard, Model Registry, and Live Code Viewer using Shadcn components stripped of their default shadows and heavy radius."
+}
