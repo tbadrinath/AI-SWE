@@ -18,6 +18,8 @@ export const endpoints = {
     api
       .get(`/runs/${id}/events`, { params: since ? { since } : {} })
       .then((r) => r.data),
+  getRunApprovals: (id) => api.get(`/runs/${id}/approvals`).then((r) => r.data),
+  submitRunApproval: (id, payload) => api.post(`/runs/${id}/approvals`, payload).then((r) => r.data),
   latestSummary: () => api.get("/runs/latest/summary").then((r) => r.data),
   downloadPhase1Url: `${API}/download/phase1.zip`,
 };

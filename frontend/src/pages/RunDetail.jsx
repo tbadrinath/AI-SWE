@@ -27,17 +27,21 @@ export default function RunDetail() {
   const { runId } = useParams();
   const [run, setRun] = useState(null);
   const [events, setEvents] = useState([]);
+  const [approvals, setApprovals] = useState([]);
+  const [submittingApproval, setSubmittingApproval] = useState(false);
   const [selectedIter, setSelectedIter] = useState(1);
   const pollRef = useRef(null);
 
   useEffect(() => {
     const load = async () => {
-      const [r, ev] = await Promise.all([
+      const [r, ev, ap] = await Promise.all([
         endpoints.getRun(runId),
         endpoints.getRunEvents(runId),
+        endpoints.getRunApprovals(runId).catch(() => []),
       ]);
       setRun(r);
       setEvents(ev);
+      setApprovals(ap);
       if (ev.length > 0) {
         const maxIter = Math.max(...ev.map((e) => e.iteration));
         setSelectedIter((s) => (s > maxIter ? maxIter : s || maxIter));
@@ -45,10 +49,14 @@ export default function RunDetail() {
     };
     load();
     pollRef.current = setInterval(async () => {
-      const r = await endpoints.getRun(runId);
-      const ev = await endpoints.getRunEvents(runId);
+      const [r, ev, ap] = await Promise.all([
+        endpoints.getRun(runId),
+        endpoints.getRunEvents(runId),
+        endpoints.getRunApprovals(runId).catch(() => []),
+      ]);
       setRun(r);
       setEvents(ev);
+      setApprovals(ap);
       if (r.status !== "running" && r.status !== "queued") {
         clearInterval(pollRef.current);
       }
@@ -70,6 +78,25 @@ export default function RunDetail() {
   const testEv = iterEvents.find((e) => e.type === "test_result");
   const diagEv = iterEvents.find((e) => e.type === "diagnosis");
   const visionEvs = iterEvents.filter((e) => e.type === "vision");
+  const pendingApproval =
+    approvals.find((a) => a.iteration === selectedIter && a.status === "pending") ||
+    approvals.find((a) => a.status === "pending");
+
+  const submitApproval = async (decision) => {
+    if (!pendingApproval) return;
+    setSubmittingApproval(true);
+    try {
+      await endpoints.submitRunApproval(runId, {
+        iteration: pendingApproval.iteration,
+        decision,
+        reviewer: "human",
+      });
+      const ap = await endpoints.getRunApprovals(runId);
+      setApprovals(ap);
+    } finally {
+      setSubmittingApproval(false);
+    }
+  };
 
   if (!run) {
     return <div className="font-mono text-sm text-neutral-500">Loading run…</div>;
@@ -139,6 +166,38 @@ export default function RunDetail() {
               #{i}
             </button>
           ))}
+        </div>
+      )}
+
+      {run.require_human_review && (
+        <div className="widget">
+          <div className="overline">human review</div>
+          {!pendingApproval && (
+            <p className="mt-2 font-mono text-[12px] text-neutral-600">No pending approval for this iteration.</p>
+          )}
+          {pendingApproval && (
+            <div className="mt-3 space-y-2">
+              <p className="font-mono text-[11px] text-neutral-700">
+                Pending approval for iteration #{pendingApproval.iteration}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => submitApproval("approved")}
+                  disabled={submittingApproval}
+                  className="border border-neutral-900 bg-[var(--ab-success-green)] px-3 py-1.5 font-mono text-[11px] uppercase text-white disabled:opacity-60"
+                >
+                  approve
+                </button>
+                <button
+                  onClick={() => submitApproval("rejected")}
+                  disabled={submittingApproval}
+                  className="border border-neutral-900 bg-[var(--ab-signal-red)] px-3 py-1.5 font-mono text-[11px] uppercase text-white disabled:opacity-60"
+                >
+                  reject
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

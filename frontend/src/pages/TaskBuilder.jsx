@@ -26,6 +26,7 @@ export default function TaskBuilder() {
   const [spec, setSpec] = useState(EXAMPLES[0].spec);
   const [modelRepoId, setModelRepoId] = useState("");
   const [maxIter, setMaxIter] = useState(4);
+  const [requireHumanReview, setRequireHumanReview] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -39,11 +40,17 @@ export default function TaskBuilder() {
   const jsonPreview = useMemo(
     () =>
       JSON.stringify(
-        { name, spec, model_repo_id: modelRepoId, max_iterations: Number(maxIter) },
+        {
+          name,
+          spec,
+          model_repo_id: modelRepoId,
+          max_iterations: Number(maxIter),
+          require_human_review: requireHumanReview,
+        },
         null,
         2,
       ),
-    [name, spec, modelRepoId, maxIter],
+    [name, spec, modelRepoId, maxIter, requireHumanReview],
   );
 
   const applyExample = (ex) => {
@@ -60,6 +67,7 @@ export default function TaskBuilder() {
         spec,
         model_repo_id: modelRepoId,
         max_iterations: Number(maxIter),
+        require_human_review: requireHumanReview,
       });
       toast.success("Run started");
       navigate(`/runs/${run.id}`);
@@ -77,6 +85,7 @@ export default function TaskBuilder() {
         spec,
         model_repo_id: modelRepoId,
         max_iterations: Number(maxIter),
+        require_human_review: requireHumanReview,
       });
       toast.success("Task saved");
     } catch (e) {
@@ -149,6 +158,15 @@ export default function TaskBuilder() {
             />
           </label>
         </div>
+
+        <label className="mt-4 flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-neutral-700">
+          <input
+            type="checkbox"
+            checked={requireHumanReview}
+            onChange={(e) => setRequireHumanReview(e.target.checked)}
+          />
+          require human approval before test stage
+        </label>
 
         <div className="mt-5">
           <div className="overline mb-2">Quick examples</div>
